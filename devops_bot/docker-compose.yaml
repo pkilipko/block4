@@ -8,9 +8,11 @@ x-postgres-common:
 
 services:
   tg_bot:
+    env_file: ".env"
     image: 192.168.11.130:5000/bot_image
 
   postgres_primary:
+    env_file: ".env"
     <<: *postgres-common
     ports:
       - 5432:5432
@@ -27,12 +29,13 @@ services:
       -c wal_log_hints=on
       -c max_replication_slots=10
       -c log_replication_commands=on
-      -c log_timezone='Europe/Samara'
+      -c log_timezone='Europe/Moscow'
       -c log_statement=all
     volumes:
-      - ./00_init.sql:/docker-entrypoint-initdb.d/00_init.sql
+      - ./db/00_init.sql:/docker-entrypoint-initdb.d/00_init.sql
 
   postgres_replica:
+    env_file: ".env"
     <<: *postgres-common
     ports:
       - 5433:5432

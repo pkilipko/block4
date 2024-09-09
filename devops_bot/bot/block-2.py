@@ -1,20 +1,20 @@
-import logging, re, paramiko, psycopg2
+import logging, re, paramiko, psycopg2, os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackQueryHandler
 from psycopg2 import Error
 
-TOKEN = "7421669519:AAGpP5L-9aidNbF0ulNRBvCKTNCRqlhjAKA"
+TOKEN = os.getenv('TOKEN')
 
 # Этапы диалога
 FIRST, SECOND, THIRD, FOURTH = range(4)
 
-host = "172.17.0.1"
-db_host = "block-3-postgres_primary-1"
-db_user = "user"
-db_pass = "password"
-database = "postgres"
-username = "py-ssh"
-password = "py-ssh"
+host = os.getenv('RM_HOST')
+db_host = os.getenv('DB_HOST')
+db_user = os.getenv('DB_USER')
+db_pass = os.getenv('DB_PASSWORD')
+database = os.getenv('DB_DATABASE')
+username = os.getenv('RM_USER')
+password = os.getenv('RM_PASSWORD')
 phoneNumberList = ""
 mailAddressList = ""
 
