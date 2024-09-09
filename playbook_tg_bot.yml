@@ -20,6 +20,4 @@
     - name: Install specified python requirements
       ansible.builtin.pip:
         requirements: /home/user/app/block4/requirements.txt
-        virtualenv: /home/user/venv
-        virtualenv_python: python3.11
         state: present
