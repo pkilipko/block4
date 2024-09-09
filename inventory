@@ -1,0 +1,8 @@
+[bot]
+192.168.11.138 ansible_user=user ansible_password=user
+
+[master]
+192.168.11.138 ansible_user=user ansible_password=user
+
+[slave]
+192.168.11.139 ansible_user=user ansible_password=user

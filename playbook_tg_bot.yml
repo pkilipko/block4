@@ -1,0 +1,25 @@
+---
+- hosts: bot
+  become: true
+  tasks:
+    - name: Install a list of packages
+      ansible.builtin.apt:
+        update_cache: yes
+        pkg:
+        - git
+        - python3-pip
+
+- hosts: bot
+  tasks:
+    - name: clone of a single branch
+      ansible.builtin.git:
+        repo: https://github.com/pkilipko/block4.git
+        dest: /home/user/app
+        single_branch: yes
+        version: ansible
+    - name: Install specified python requirements
+      ansible.builtin.pip:
+        requirements: /home/user/app/block4/requirements.txt
+        virtualenv: /home/user/venv
+        virtualenv_python: python3.11
+        state: present
