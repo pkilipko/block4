@@ -1,128 +1,112 @@
 ---
 - hosts: bot
-  become: true
   tasks:
-    - name: Install a list of packages
-      ansible.builtin.apt:
-        update_cache: yes
-        pkg:
-        - git
-        - python3-pip
-
-- hosts: bot
-  tasks:
-    - name: clone of a single branch
-      ansible.builtin.git:
-        repo: https://github.com/pkilipko/block4.git
-        dest: /home/user/app
-        single_branch: yes
-        version: ansible
-    - name: Install specified python requirements
-      ansible.builtin.pip:
-        requirements: /home/user/app/block4/requirements.txt
-        state: present
-
-
----
-- hosts: bot
-  tasks:
-    - name: Клонирование репозитория и checkout в ветку ansible
+    - name: Clone of a single branch
       git:
         repo: https://github.com/pkilipko/block4.git
         dest: /home/user/app
         version: ansible
         update: yes
-
-    - name: Установка зависимостей из requirements.txt
+    - name: Install specified python requirements
       pip:
-        requirements: /home/user/app/block4/requirements.txt
+        requirements: /home/user/app/requirements.txt
+        virtualenv: /home/user/venv
+        virtualenv_python: python3.11
         state: present
-
-    - name: Копирование .env файла с контроллера на удалённый хост
+    - name: Copy file with permissions
       copy:
-        src: /home/vagrant/.env
-        dest: /home/vagrant/START/.env
-        owner: vagrant
-        group: vagrant
+        src: /home/user/block-4-gh/block4/.env
+        dest: /home/user/app/.env
+        owner: user
+        group: user
         mode: '0644'
-
-    - name: Запуск main.py в nohup
-      command: nohup python3 /home/vagrant/START/main.py &
+    - name: Start script in background with Asynchronous actions and polling
+      command: nohup /home/user/venv/bin/python3 block-2.py &
       args:
-        chdir: /home/vagrant/START
-        creates: /tmp/start.lock
-      async: 1
+        chdir: "/home/user/app/"
+      async: 9999
       poll: 0
 
 - hosts: primary
   become: True
   tasks:
-    - name: Копирование postgresql.conf
+    - name: Install DB
+      apt:
+        pkg:
+        - postgresql
+        - postgresql-contrib
+        state: present
+        update_cache: yes
+    - name: Copy config file
       copy:
-        src: /home/vagrant/pg_configs/primary/postgresql.conf
-        dest: /etc/postgresql/14/main/postgresql.conf
+        src: /home/user/block-4-gh/block4/postgresql.conf
+        dest: /etc/postgresql/15/main/postgresql.conf
         owner: postgres
         group: postgres
         mode: '0644'
-
-    - name: Копирование pg_hba.conf
+    - name: Copy config file
       copy:
-        src: /home/vagrant/pg_configs/primary/pg_hba.conf
-        dest: /etc/postgresql/14/main/pg_hba.conf
+        src: /home/user/block-4-gh/block4/pg_hba.conf
+        dest: /etc/postgresql/15/main/pg_hba.conf
         owner: postgres
         group: postgres
         mode: '0644'
-
-    - name: Перезапуск службы postgresql
+    - name: Restart DB daemon
       service:
         name: postgresql
         state: restarted
-
-    - name: Создание базы данных homework
-      become: yes
+    - name: Create DB
       become_user: postgres
       postgresql_db:
-        name: homework
+        name: practice
         state: present
         login_user: postgres
-
-    - name: Загрузка схемы из файла schema.sql
-      become: yes
-      become_user: postgres
-      command: psql homework -f /vagrant/schema.sql
+    - name: Copy schema to public place & Change file ownership, group and permissions
+      ansible.builtin.copy:
+        remote_src: true
+        src: "/home/user/app/00_init.sql"
+        dest: /tmp/00_init.sql
+        owner: postgres
+        group: postgres
+        mode: '0644'
+    - name: Apply DB schema
+      command: sudo -u postgres psql -d practice -f "/tmp/00_init.sql"
 
 - hosts: replica
   become: True
   tasks:
-    - name: Копирование postgresql.conf для реплики
+    - name: Install DB
+      apt:
+        pkg:
+        - postgresql
+        - postgresql-contrib
+        state: present
+        update_cache: yes
+    - name: Copy config file
       copy:
-        src: /vagrant/pg_configs/replica/postgresql.conf
-        dest: /etc/postgresql/14/main/postgresql.conf
+        src: /home/user/block-4-gh/block4/postgresql-repl.conf
+        dest: /etc/postgresql/15/main/postgresql.conf
         owner: postgres
         group: postgres
         mode: '0644'
-
-    - name: Остановка службы postgresql
+    - name: Stop DB daemon
       service:
         name: postgresql
         state: stopped
-
-    - name: Удаление данных в директории main
+    - name: Clear data
       file:
-        path: /var/lib/postgresql/14/main/
+        path: /var/lib/postgresql/15/main/
         state: absent
-
-    - name: Запуск службы postgresql после очистки
+    - name: Start DB daemon
       service:
         name: postgresql
         state: started
-
-    - name: Выполнение pg_basebackup
+    - name: Take a base backup of a PostgreSQL cluster
       become: yes
       become_user: postgres
-      command: pg_basebackup -R -h 192.168.50.11 -U repl_user -D /var/lib/postgresql/14/main -P
+      command: pg_basebackup -R -h 192.168.11.138 -U replicator -D /var/lib/postgresql/15/main -P
       environment:
-        PGPASSWORD: "111"
+        PGPASSWORD: "replicator_password"
       register: pg_basebackup_result
       failed_when: pg_basebackup_result.rc != 0
       changed_when: False
